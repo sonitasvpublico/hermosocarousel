@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonitaSV beautiful Carousel</title>
+    <!-- Swiper.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
+    <style>
+        /* Global Styles (inspired by sonitasv.com) */
+        body {
+            margin: 0;
+            font-family: 'Poppins', 'Arial', sans-serif; /* Poppins is used on sonitasv.com */
+            background-color: #121212; /* Dark background */
+            color: #f0f0f0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        /* Helper for centering content if needed elsewhere */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Carousel Section Styles */
+        .hero-carousel-section {
+            width: 100%;
+            /* Adjust height as needed, can be vh or fixed px */
+            height: 70vh; /* Example: 70% of viewport height */
+            min-height: 400px; /* Minimum height */
+            max-height: 700px; /* Maximum height */
+            position: relative;
+            overflow: hidden; /* Important for Three.js canvas if it's a background */
+        }
+
+        /* Three.js Canvas (if used as background) */
+        #three-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0; /* Behind Swiper */
+        }
+
+        /* Swiper Styles */
+        .swiper-container {
+            width: 100%;
+            height: 100%;
+            position: relative; /* To keep controls within */
+            z-index: 1; /* Above Three.js canvas */
+        }
+
+        .swiper-slide {
+            text-align: center;
+            font-size: 18px;
+            background: #1a1a1a; /* Slightly lighter than body for contrast */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Crucial for object-fit */
+            cursor: pointer;
+            position: relative; /* For overlay */
+        }
+
+        .swiper-slide img,
+        .swiper-slide video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* This is key for image/video sizing */
+            transition: transform 0.4s ease-out, filter 0.4s ease-out;
+        }
+
+        /* Hover effect on slide content */
+        .swiper-slide:hover img,
+        .swiper-slide:hover video {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        
+        /* Play icon overlay for videos */
+        .swiper-slide .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            font-size: 60px;
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none; /* So it doesn't interfere with click */
+            opacity: 0.7;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .swiper-slide:hover .play-icon {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 1;
+        }
+
+
+        /* Swiper Navigation Arrows */
+        .swiper-button-next,
+        .swiper-button-prev {
+            color: #fff; /* White arrows */
+            background-image: linear-gradient(135deg, #C307F2, #EA018B); /* Sonitas gradient */
+            width: 44px; /* Adjust size */
+            height: 44px; /* Adjust size */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            opacity: 0.7;
+        }
+        .swiper-button-next:hover,
+        .swiper-button-prev:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .swiper-button-next::after,
+        .swiper-button-prev::after {
+            font-size: 20px; /* Arrow icon size */
+            font-weight: bold;
+        }
+
+        /* Swiper Pagination Dots */
+        .swiper-pagination-bullet {
+            background: rgba(255, 255, 255, 0.5); /* Semi-transparent white */
+            opacity: 0.7;
+            width: 10px;
+            height: 10px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .swiper-pagination-bullet-active {
+            background-image: linear-gradient(135deg, #C307F2, #EA018B); /* Sonitas gradient */
+            opacity: 1;
+            transform: scale(1.2);
+        }
+        
+        .swiper-pagination {
+            bottom: 20px !important; /* Position pagination lower */
+        }
+
+        /* Lightbox Styles */
+        .lightbox {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lightbox-content {
+            position: relative;
+            margin: auto;
+            padding: 0;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex; /* For centering image/video */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lightbox-content img,
+        .lightbox-content video {
+            max-width: 100%;
+            max-height: 100vh; /* Max height of viewport */
+            object-fit: contain;
+            border-radius: 5px;
+            box-shadow: 0 0 25px rgba(200, 0, 150, 0.5); /* Subtle glow */
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 10000;
+        }
+
+        .lightbox-close:hover,
+        .lightbox-close:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .hero-carousel-section {
+                height: 50vh;
+                min-height: 300px;
+            }
+
+            .swiper-button-next,
+            .swiper-button-prev {
+                width: 36px;
+                height: 36px;
+            }
+            .swiper-button-next::after,
+            .swiper-button-prev::after {
+                font-size: 16px;
+            }
+            .swiper-slide .play-icon {
+                font-size: 40px;
+            }
+            .lightbox-close {
+                top: 15px;
+                right: 25px;
+                font-size: 30px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .hero-carousel-section {
+                height: 40vh;
+                min-height: 250px;
+            }
+             .swiper-pagination {
+                bottom: 10px !important;
+            }
+            .swiper-pagination-bullet {
+                width: 8px;
+                height: 8px;
+            }
+        }
+
+        /* This is where the rest of your site's header/nav would go */
+        .site-header-placeholder {
+            background-color: #222;
+            padding: 20px;
+            text-align: center;
+            color: white;
+            border-top: 2px solid #333; /* Simulate separation */
+        }
+        .site-header-placeholder h1 { margin: 0; font-size: 1.5em;}
+        .site-header-placeholder p { margin-top: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Carousel Section -->
+    <section class="hero-carousel-section">
+        <!-- Optional: Three.js Canvas for background effects -->
+        <canvas id="three-canvas"></canvas>
+
+        <!-- Swiper -->
+        <div class="swiper-container main-carousel">
+            <div class="swiper-wrapper">
+                <!-- SLIDE 1: Image -->
+                <div class="swiper-slide" data-type="image" data-src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80">
+                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80" alt="Beautiful Landscape">
+                </div>
+
+                <!-- SLIDE 2: Video -->
+                <div class="swiper-slide" data-type="video" data-src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4">
+                    <video src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" loop muted playsinline preload="metadata"></video>
+                    <div class="play-icon">►</div> <!-- Simple play icon -->
+                </div>
+
+                <!-- SLIDE 3: Image -->
+                <div class="swiper-slide" data-type="image" data-src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80">
+                    <img src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80" alt="Misty Mountains">
+                </div>
+                
+                <!-- SLIDE 4: Image -->
+                <div class="swiper-slide" data-type="image" data-src="https://images.unsplash.com/photo-1501854140801-50d01698950b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1800&q=80">
+                    <img src="https://images.unsplash.com/photo-1501854140801-50d01698950b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1800&q=80" alt="Green Valley">
+                </div>
+
+                <!-- Add more slides here -->
+                <!-- To add a new image slide:
+                <div class="swiper-slide" data-type="image" data-src="YOUR_FULL_IMAGE_URL">
+                    <img src="YOUR_THUMBNAIL_OR_SAME_IMAGE_URL" alt="Description">
+                </div>
+                -->
+                <!-- To add a new video slide:
+                <div class="swiper-slide" data-type="video" data-src="YOUR_VIDEO_URL.mp4">
+                    <video src="YOUR_VIDEO_URL.mp4" loop muted playsinline preload="metadata"></video>
+                    <div class="play-icon">►</div>
+                </div>
+                -->
+            </div>
+            <!-- Add Pagination -->
+            <div class="swiper-pagination"></div>
+
+            <!-- Add Navigation -->
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+    </section>
+
+    <!-- Lightbox Structure -->
+    <div id="myLightbox" class="lightbox">
+        <span class="lightbox-close">×</span>
+        <div class="lightbox-content">
+            <!-- Content (img or video) will be injected here by JS -->
+        </div>
+    </div>
+
+    <!-- This is where the rest of your site's header/nav would go -->
+    <!-- For example, the buttons from sonitasv.com -->
+    <header class="site-header-placeholder">
+        <h1>SonitaSV</h1>
+        <p>This is where your navigation buttons would be.</p>
+        <!-- Example buttons:
+        <nav>
+            <a href="#">Home</a>
+            <a href="#">About</a>
+            <a href="#">Services</a>
+            <a href="#">Contact</a>
+        </nav>
+        -->
+    </header>
+    
+    <!-- Main content of the page would follow -->
+    <div class="container" style="padding-top: 50px; padding-bottom: 50px; text-align: center;">
+        <h2>Page Content Starts Here</h2>
+        <p>This is placeholder content for the rest of your website.</p>
+    </div>
+
+
+    <!-- Swiper.js JS -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <!-- Three.js (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- Swiper Carousel Initialization ---
+            const mainCarousel = new Swiper('.main-carousel', {
+                loop: true,
+                slidesPerView: 1, // Show 1 slide at a time by default
+                spaceBetween: 0, // No space between slides for full-bleed effect
+                effect: 'slide', // 'slide', 'fade', 'cube', 'coverflow', 'flip'
+                grabCursor: true,
+                centeredSlides: true,
+                autoplay: {
+                    delay: 5000, // 5 seconds
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                // Responsive breakpoints
+                breakpoints: {
+                    // when window width is >= 768px
+                    768: {
+                        // slidesPerView: 1.5, // Example: show 1 full and parts of next/prev
+                        // spaceBetween: 20
+                    },
+                    // when window width is >= 1024px
+                    1024: {
+                        // slidesPerView: 2,
+                        // spaceBetween: 30
+                    }
+                },
+                on: {
+                    init: function () {
+                        // Autoplay videos in view if any are active initially
+                        // This is tricky with loop and multiple videos.
+                        // For simplicity, videos are muted and loop. Click opens them in lightbox.
+                        playVisibleVideos(this);
+                    },
+                    slideChangeTransitionEnd: function () {
+                        playVisibleVideos(this);
+                    }
+                }
+            });
+
+            function playVisibleVideos(swiperInstance) {
+                // Pause all videos first
+                swiperInstance.slides.forEach(slide => {
+                    const video = slide.querySelector('video');
+                    if (video) {
+                        video.pause();
+                    }
+                });
+                // Play video in active slide
+                const activeSlide = swiperInstance.slides[swiperInstance.activeIndex];
+                const videoInActiveSlide = activeSlide.querySelector('video');
+                if (videoInActiveSlide) {
+                    videoInActiveSlide.play().catch(error => console.log("Autoplay prevented:", error));
+                }
+            }
+
+
+            // --- Lightbox Functionality ---
+            const lightbox = document.getElementById('myLightbox');
+            const lightboxContent = lightbox.querySelector('.lightbox-content');
+            const closeBtn = lightbox.querySelector('.lightbox-close');
+
+            document.querySelectorAll('.swiper-slide').forEach(item => {
+                item.addEventListener('click', event => {
+                    const type = item.getAttribute('data-type');
+                    const src = item.getAttribute('data-src');
+                    
+                    if (!src) return; // No src, do nothing
+
+                    lightboxContent.innerHTML = ''; // Clear previous content
+
+                    if (type === 'image') {
+                        const img = document.createElement('img');
+                        img.src = src;
+                        lightboxContent.appendChild(img);
+                    } else if (type === 'video') {
+                        const video = document.createElement('video');
+                        video.src = src;
+                        video.controls = true;
+                        video.autoplay = true;
+                        video.style.maxWidth = '100%'; // Ensure it fits
+                        video.style.maxHeight = '90vh';
+                        lightboxContent.appendChild(video);
+                    }
+                    
+                    lightbox.style.display = 'flex';
+                    // Pause Swiper autoplay when lightbox is open
+                    if (mainCarousel.autoplay.running) {
+                        mainCarousel.autoplay.stop();
+                    }
+                });
+            });
+
+            closeBtn.addEventListener('click', () => {
+                lightbox.style.display = 'none';
+                lightboxContent.innerHTML = ''; // Clear content
+                // Resume Swiper autoplay if it was running
+                // Check if autoplay object and its methods exist
+                if (mainCarousel.params.autoplay && mainCarousel.params.autoplay.delay) {
+                     mainCarousel.autoplay.start();
+                }
+            });
+
+            // Close lightbox if clicked outside of content (on the overlay)
+            lightbox.addEventListener('click', (event) => {
+                if (event.target === lightbox) { // Check if the click is on the overlay itself
+                    lightbox.style.display = 'none';
+                    lightboxContent.innerHTML = '';
+                    if (mainCarousel.params.autoplay && mainCarousel.params.autoplay.delay) {
+                        mainCarousel.autoplay.start();
+                    }
+                }
+            });
+
+
+            // --- Basic Three.js Background Effect (Subtle Particles) ---
+            // This is a very simple example. More complex effects would require more code.
+            let scene, camera, renderer, particles, material;
+            const canvas = document.getElementById('three-canvas');
+            const carouselSection = document.querySelector('.hero-carousel-section');
+
+            function initThree() {
+                if (!carouselSection || !canvas) {
+                    console.warn("Three.js canvas or its container not found.");
+                    return;
+                }
+                
+                const width = carouselSection.clientWidth;
+                const height = carouselSection.clientHeight;
+
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+                camera.position.z = 50; // Adjusted for particle visibility
+
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true }); // alpha:true for transparent background
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+
+                const particleCount = 500; // Number of particles
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3); // For gradient colors
+
+                const color1 = new THREE.Color("#C307F2"); // Purple
+                const color2 = new THREE.Color("#EA018B"); // Pink
+
+                for (let i = 0; i < particleCount; i++) {
+                    // Positions (spread out)
+                    positions[i * 3] = (Math.random() - 0.5) * 200; // x
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 200; // y
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 100; // z (depth)
+
+                    // Colors (gradient based on y position)
+                    const lerpFactor = (positions[i * 3 + 1] / 100 + 0.5); // Normalize y to 0-1
+                    const mixedColor = new THREE.Color().lerpColors(color1, color2, lerpFactor);
+                    colors[i * 3] = mixedColor.r;
+                    colors[i * 3 + 1] = mixedColor.g;
+                    colors[i * 3 + 2] = mixedColor.b;
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+
+                material = new THREE.PointsMaterial({
+                    size: 0.5, // Particle size
+                    vertexColors: true, // Use colors from geometry
+                    transparent: true,
+                    opacity: 0.7,
+                    blending: THREE.AdditiveBlending // Nice effect for bright particles
+                });
+
+                particles = new THREE.Points(geometry, material);
+                scene.add(particles);
+
+                animateThree();
+            }
+
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+
+            function animateThree() {
+                requestAnimationFrame(animateThree);
+
+                // Subtle particle animation
+                const time = Date.now() * 0.0001;
+                particles.rotation.x = time * 0.2 + mouseY * 0.1;
+                particles.rotation.y = time * 0.2 + mouseX * 0.1;
+                
+                // Make particles drift slowly
+                const positions = particles.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i + 1] += Math.sin(time + positions[i]) * 0.03; // y drift
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+
+
+                renderer.render(scene, camera);
+            }
+
+            function onWindowResize() {
+                if (!carouselSection || !camera || !renderer) return;
+                const width = carouselSection.clientWidth;
+                const height = carouselSection.clientHeight;
+
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            }
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Initialize Three.js if canvas exists
+            if (document.getElementById('three-canvas')) {
+                 initThree();
+            } else {
+                console.log("Three.js canvas not found, skipping Three.js initialization.");
+            }
+
+        });
+    </script>
+
+</body>
+</html>
