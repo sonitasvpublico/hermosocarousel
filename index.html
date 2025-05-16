@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SonitaSV beautiful Carousel</title>
+     <link rel="icon" type="image/svg+xml" href="tienda-sonita.svg">
+    <title>🔥SonitaSV beautiful Carousel</title>
     <!-- Swiper.js CSS -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
 
     <style>
         /* Global Styles (inspired by sonitasv.com) */
+        #logo {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 100;
+     }
+
+     #logo img {
+        height: 40px; /* Puedes ajustar el tamaño */
+     }
+        
         body {
             margin: 0;
             font-family: 'Poppins', 'Arial', sans-serif; /* Poppins is used on sonitasv.com */
@@ -252,6 +264,10 @@
     </style>
 </head>
 <body>
+   <!-- logo -->
+    <div id="logo">
+        <img src="tienda-sonita.svg" alt="Logo" />
+    </div>
 
     <!-- Carousel Section -->
     <section class="hero-carousel-section">
